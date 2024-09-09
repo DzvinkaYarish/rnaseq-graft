@@ -3,7 +3,8 @@ channels:
   - bioconda
   - conda-forge
   - defaults
+  - davidaknowles
 dependencies:
-  - bioconda::regtools=0.6.0
-  - bioconda::samtools=1.15
-  - conda-forge::r-rlang=0.4.12
+  - conda-forge::r-base=3.4.1
+  - davidaknowles::r-leafcutter
+

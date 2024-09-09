@@ -103,20 +103,50 @@ def run_info_message() {
   log.info "========================================="
 }
 
-include {align_reads} from './workflows/align_wf'
-include {count_features} from './workflows/featureCounts_wf'
-include {quant_exons} from './workflows/exonQuant_wf'
-include {quant_tx} from './workflows/txQuant_wf'
-include {quant_txrev} from './workflows/txrevQuant_wf'
+// include {align_reads} from './workflows/align_wf'
+// include {count_features} from './workflows/featureCounts_wf'
+// include {quant_exons} from './workflows/exonQuant_wf'
+// include {quant_tx} from './workflows/txQuant_wf'
+// include {quant_txrev} from './workflows/txrevQuant_wf'
 include {quant_leafcutter} from './workflows/leafcutter_wf'
-include { createBigWig } from './modules/utils'
-include { generate_mbv } from './workflows/mbv_wf'
-include { sample_correlation } from './modules/utils'
+// include { createBigWig } from './modules/utils'
+// include { generate_mbv } from './workflows/mbv_wf'
+// include { sample_correlation } from './modules/utils'
 
 workflow {
     run_info_message()
-    align_reads()
-    
+    if (params.run_align_reads){
+        log.info "Running alignment step"
+        align_reads()
+        bam_sorted_by_name = align_reads.out.bam_sorted_by_name
+        bam_sorted_indexed = align_reads.out.bam_sorted_indexed
+        trimmed_reads = align_reads.out.trimmed_reads
+    } else {
+        log.info "Skipping alignment step, BAM files are provided."
+
+//         Channel.fromPath(params.BamSortedByNameReadPathsFile)
+//         .ifEmpty { error "Cannot find any readPathsFile file in: ${params.BamSortedByNameReadPathsFile}" }
+//         .splitCsv(header: false, sep: '\t', strip: true)
+//         .map{row -> [ [ file(row[0]) ] , [ file(row[1]) ] ]}
+//         .set { bam_sorted_by_name }
+
+        log.info "BamSortedIndexedReadPathsFile: ${params.BamSortedIndexedReadPathsFile}"
+        Channel.fromPath(params.BamSortedIndexedReadPathsFile)
+        .ifEmpty { error "Cannot find any readPathsFile file in: ${params.BamSortedIndexedReadPathsFile}" }
+        .splitCsv(header: false, sep: '\t', strip: true)
+        .map{row -> [ [ file(row[0]) ] , [ file(row[1]) ] ]}
+        .set { bam_sorted_indexed }
+        log.info "bam_sorted_indexed: ${bam_sorted_indexed.view()}"
+
+//         Channel.fromPath(params.TrimmedReadsReadPathsFile)
+//         .ifEmpty { error "Cannot find any readPathsFile file in: ${params.TrimmedReadsReadPathsFile}" }
+//         .splitCsv(header: false, sep: '\t', strip: true)
+//         .map{row -> [ [ file(row[0]) ] , [ file(row[1]) ] ]}
+//         .set { trimmed_reads }
+//
+    }
+
+
     if (params.run_ge_quant){
         count_features(align_reads.out.bam_sorted_by_name)
     }
@@ -134,7 +164,7 @@ workflow {
     }
 
     if (params.run_leafcutter) {
-        quant_leafcutter(align_reads.out.bam_sorted_indexed)
+        quant_leafcutter(bam_sorted_indexed)
     }
 
     if (params.generate_bigwig) {
